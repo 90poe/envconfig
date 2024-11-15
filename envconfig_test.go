@@ -862,3 +862,34 @@ func BenchmarkGatherInfo(b *testing.B) {
 		gatherInfo("env_config", &s)
 	}
 }
+
+type customEnvironment map[string]string
+
+func (env customEnvironment) LookupEnv(key string) (string, bool) {
+	v, ok := env[key]
+	return v, ok
+}
+
+func (env customEnvironment) Environ() []string {
+	keys := make([]string, 0, len(env))
+	for key := range env {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func TestWithLookupEnv(t *testing.T) {
+	env := customEnvironment(map[string]string{
+		"APP_PORT": "8080",
+	})
+	var cfg struct {
+		Port int `envconfig:"PORT" required:"true"`
+	}
+	err := Process("APP", &cfg, WithEnvironment(env))
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if cfg.Port != 8080 {
+		t.Errorf("expected %d, got %v", 1234, cfg.Port)
+	}
+}
